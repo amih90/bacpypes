@@ -1,0 +1,361 @@
+From 81bac1a9ea3d7063c951465dd83ae952e35f956a Mon Sep 17 00:00:00 2001
+From: Ami Hollander <amhollan@microsoft.com>
+Date: Sun, 27 Feb 2022 12:24:06 +0200
+Subject: [PATCH] populate real pdu
+
+---
+ py25/bacpypes/analysis.py   | 31 ++++++++++++++++++++++++++++++-
+ py25/bacpypes/appservice.py |  4 ++++
+ py25/bacpypes/netservice.py |  4 ++++
+ py27/bacpypes/analysis.py   | 31 ++++++++++++++++++++++++++++++-
+ py27/bacpypes/appservice.py |  4 ++++
+ py27/bacpypes/netservice.py |  4 ++++
+ py34/bacpypes/analysis.py   | 31 ++++++++++++++++++++++++++++++-
+ py34/bacpypes/appservice.py |  4 ++++
+ py34/bacpypes/netservice.py |  4 ++++
+ 9 files changed, 114 insertions(+), 3 deletions(-)
+
+diff --git a/py25/bacpypes/analysis.py b/py25/bacpypes/analysis.py
+index aaba96b..6dd8bf2 100755
+--- a/py25/bacpypes/analysis.py
++++ b/py25/bacpypes/analysis.py
+@@ -16,7 +16,10 @@ import sys
+ import time
+ import socket
+ import struct
+-
++# MDIoT
++# +++
++import copy
++# +++
+ pcap = None
+ try:
+     import pcap
+@@ -164,6 +167,10 @@ def decode_packet(data):
+ 
+         d = decode_ip(data)
+         pduSource, pduDestination = d['source_address'], d['destination_address']
++        # MDIoT
++        # +++
++        ip_source = copy.deepcopy(d['source_address'])
++        # +++
+         data = d['data']
+ 
+         if (d['protocol'] == 'udp'):
+@@ -198,6 +205,10 @@ def decode_packet(data):
+             xpdu = BVLPDU()
+             xpdu.decode(pdu)
+             pdu = xpdu
++            # MDIoT
++            # +++
++            bvll = copy.deepcopy(pdu)
++            # +++
+         except Exception as err:
+             if _debug: decode_packet._debug("    - BVLPDU decoding error: %r", err)
+             return pdu
+@@ -216,12 +227,20 @@ def decode_packet(data):
+             if _debug: decode_packet._debug("    - bpdu: %r", bpdu)
+ 
+             pdu = bpdu
++            # MDIoT
++            # +++
++            bvll = copy.deepcopy(bpdu)
++            # +++
+ 
+             # lift the address for forwarded NPDU's
+             if atype is ForwardedNPDU:
+                 pdu.pduSource = bpdu.bvlciAddress
+             # no deeper decoding for some
+             elif atype not in (DistributeBroadcastToNetwork, OriginalUnicastNPDU, OriginalBroadcastNPDU):
++                # MDIoT
++                # +++
++                pdu.ipSource = ip_source
++                # +++
+                 return pdu
+ 
+         except Exception, err:
+@@ -328,6 +347,11 @@ def decode_packet(data):
+             return xpdu
+ 
+         # success
++        # MDIoT
++        # +++
++        apdu.ipSource = ip_source
++        apdu.bvll = bvll
++        # +++
+         return apdu
+ 
+     else:
+@@ -348,6 +372,11 @@ def decode_packet(data):
+             return xpdu
+ 
+         # success
++        # MDIoT
++        # +++
++        npdu.ipSource = ip_source
++        npdu.bvll = bvll
++        # +++
+         return npdu
+ 
+ bacpypes_debugging(decode_packet)
+diff --git a/py25/bacpypes/appservice.py b/py25/bacpypes/appservice.py
+index 12929be..800cca9 100755
+--- a/py25/bacpypes/appservice.py
++++ b/py25/bacpypes/appservice.py
+@@ -1531,6 +1531,10 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
+             try:
+                 xpdu = atype()
+                 xpdu.decode(apdu)
++                # MDIoT
++                # +++
++                xpdu.realPduSource = apdu.realPduSource
++                # +++
+             except Exception, err:
+                 ApplicationServiceAccessPoint._exception("complex ack decoding error: %r", err)
+                 return
+diff --git a/py25/bacpypes/netservice.py b/py25/bacpypes/netservice.py
+index 71cf2a1..c0ddd52 100755
+--- a/py25/bacpypes/netservice.py
++++ b/py25/bacpypes/netservice.py
+@@ -547,6 +547,10 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
+                     NetworkServiceAccessPoint._debug("    - apdu.pduSource: %r", apdu.pduSource)
+                     NetworkServiceAccessPoint._debug("    - apdu.pduDestination: %r", apdu.pduDestination)
+ 
++                # MDIoT
++                # +++
++                apdu.realPduSource = npdu.pduSource
++                # +++
+                 # pass upstream to the application layer
+                 self.response(apdu)
+ 
+diff --git a/py27/bacpypes/analysis.py b/py27/bacpypes/analysis.py
+index d020c66..5d36788 100755
+--- a/py27/bacpypes/analysis.py
++++ b/py27/bacpypes/analysis.py
+@@ -16,7 +16,10 @@ import sys
+ import time
+ import socket
+ import struct
+-
++# MDIoT
++# +++
++import copy
++# +++
+ pcap = None
+ try:
+     import pcap
+@@ -162,6 +165,10 @@ def decode_packet(data):
+ 
+         d = decode_ip(data)
+         pduSource, pduDestination = d['source_address'], d['destination_address']
++        # MDIoT
++        # +++
++        ip_source = copy.deepcopy(d['source_address'])
++        # +++
+         data = d['data']
+ 
+         if (d['protocol'] == 'udp'):
+@@ -196,6 +203,10 @@ def decode_packet(data):
+             xpdu = BVLPDU()
+             xpdu.decode(pdu)
+             pdu = xpdu
++            # MDIoT
++            # +++
++            bvll = copy.deepcopy(pdu)
++            # +++
+         except Exception as err:
+             if _debug: decode_packet._debug("    - BVLPDU decoding error: %r", err)
+             return pdu
+@@ -214,6 +225,10 @@ def decode_packet(data):
+             if _debug: decode_packet._debug("    - bpdu: %r", bpdu)
+ 
+             pdu = bpdu
++            # MDIoT
++            # +++
++            bvll = copy.deepcopy(bpdu)
++            # +++
+ 
+             # lift the address for forwarded NPDU's
+             if atype is ForwardedNPDU:
+@@ -223,6 +238,10 @@ def decode_packet(data):
+                     pdu.pduSource.addrRoute = old_pdu_source
+             # no deeper decoding for some
+             elif atype not in (DistributeBroadcastToNetwork, OriginalUnicastNPDU, OriginalBroadcastNPDU):
++                # MDIoT
++                # +++
++                pdu.ipSource = ip_source
++                # +++
+                 return pdu
+ 
+         except Exception as err:
+@@ -331,6 +350,11 @@ def decode_packet(data):
+             return xpdu
+ 
+         # success
++        # MDIoT
++        # +++
++        apdu.ipSource = ip_source
++        apdu.bvll = bvll
++        # +++
+         return apdu
+ 
+     else:
+@@ -351,6 +375,11 @@ def decode_packet(data):
+             return xpdu
+ 
+         # success
++        # MDIoT
++        # +++
++        npdu.ipSource = ip_source
++        npdu.bvll = bvll
++        # +++
+         return npdu
+ 
+ #
+diff --git a/py27/bacpypes/appservice.py b/py27/bacpypes/appservice.py
+index 3617c49..8265d07 100755
+--- a/py27/bacpypes/appservice.py
++++ b/py27/bacpypes/appservice.py
+@@ -1528,6 +1528,10 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
+             try:
+                 xpdu = atype()
+                 xpdu.decode(apdu)
++                # MDIoT
++                # +++
++                xpdu.realPduSource = apdu.realPduSource
++                # +++
+             except Exception as err:
+                 ApplicationServiceAccessPoint._exception("complex ack decoding error: %r", err)
+                 return
+diff --git a/py27/bacpypes/netservice.py b/py27/bacpypes/netservice.py
+index 83fa1e0..605c26a 100755
+--- a/py27/bacpypes/netservice.py
++++ b/py27/bacpypes/netservice.py
+@@ -569,6 +569,10 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
+                     NetworkServiceAccessPoint._debug("    - apdu.pduSource: %r", apdu.pduSource)
+                     NetworkServiceAccessPoint._debug("    - apdu.pduDestination: %r", apdu.pduDestination)
+ 
++                # MDIoT
++                # +++
++                apdu.realPduSource = npdu.pduSource
++                # +++
+                 # pass upstream to the application layer
+                 self.response(apdu)
+ 
+diff --git a/py34/bacpypes/analysis.py b/py34/bacpypes/analysis.py
+index 3650a8b..ab5593e 100755
+--- a/py34/bacpypes/analysis.py
++++ b/py34/bacpypes/analysis.py
+@@ -16,7 +16,10 @@ import sys
+ import time
+ import socket
+ import struct
+-
++# MDIoT
++# +++
++import copy
++# +++
+ pcap = None
+ try:
+     import pcap
+@@ -162,6 +165,10 @@ def decode_packet(data):
+ 
+         d = decode_ip(data)
+         pduSource, pduDestination = d['source_address'], d['destination_address']
++        # MDIoT
++        # +++
++        ip_source = copy.deepcopy(d['source_address'])
++        # +++
+         data = d['data']
+ 
+         if (d['protocol'] == 'udp'):
+@@ -196,6 +203,10 @@ def decode_packet(data):
+             xpdu = BVLPDU()
+             xpdu.decode(pdu)
+             pdu = xpdu
++            # MDIoT
++            # +++
++            bvll = copy.deepcopy(pdu)
++            # +++
+         except Exception as err:
+             if _debug: decode_packet._debug("    - BVLPDU decoding error: %r", err)
+             return pdu
+@@ -214,6 +225,10 @@ def decode_packet(data):
+             if _debug: decode_packet._debug("    - bpdu: %r", bpdu)
+ 
+             pdu = bpdu
++            # MDIoT
++            # +++
++            bvll = copy.deepcopy(bpdu)
++            # +++
+ 
+             # lift the address for forwarded NPDU's
+             if atype is ForwardedNPDU:
+@@ -223,6 +238,10 @@ def decode_packet(data):
+                     pdu.pduSource.addrRoute = old_pdu_source
+             # no deeper decoding for some
+             elif atype not in (DistributeBroadcastToNetwork, OriginalUnicastNPDU, OriginalBroadcastNPDU):
++                # MDIoT
++                # +++
++                pdu.ipSource = ip_source
++                # +++
+                 return pdu
+ 
+         except Exception as err:
+@@ -331,6 +350,11 @@ def decode_packet(data):
+             return xpdu
+ 
+         # success
++        # MDIoT
++        # +++
++        apdu.ipSource = ip_source
++        apdu.bvll = bvll
++        # +++
+         return apdu
+ 
+     else:
+@@ -351,6 +375,11 @@ def decode_packet(data):
+             return xpdu
+ 
+         # success
++        # MDIoT
++        # +++
++        npdu.ipSource = ip_source
++        npdu.bvll = bvll
++        # +++
+         return npdu
+ 
+ #
+diff --git a/py34/bacpypes/appservice.py b/py34/bacpypes/appservice.py
+index 6bfbfd0..77841f6 100755
+--- a/py34/bacpypes/appservice.py
++++ b/py34/bacpypes/appservice.py
+@@ -1528,6 +1528,10 @@ class ApplicationServiceAccessPoint(ApplicationServiceElement, ServiceAccessPoin
+             try:
+                 xpdu = atype()
+                 xpdu.decode(apdu)
++                # MDIoT
++                # +++
++                xpdu.realPduSource = apdu.realPduSource
++                # +++
+             except Exception as err:
+                 ApplicationServiceAccessPoint._exception("complex ack decoding error: %r", err)
+                 xpdu = Error(errorClass=7, errorCode=57)  # communication, invalidTag
+diff --git a/py34/bacpypes/netservice.py b/py34/bacpypes/netservice.py
+index a59d4a5..8880926 100755
+--- a/py34/bacpypes/netservice.py
++++ b/py34/bacpypes/netservice.py
+@@ -569,6 +569,10 @@ class NetworkServiceAccessPoint(ServiceAccessPoint, Server, DebugContents):
+                     NetworkServiceAccessPoint._debug("    - apdu.pduSource: %r", apdu.pduSource)
+                     NetworkServiceAccessPoint._debug("    - apdu.pduDestination: %r", apdu.pduDestination)
+ 
++                # MDIoT
++                # +++
++                apdu.realPduSource = npdu.pduSource
++                # +++
+                 # pass upstream to the application layer
+                 self.response(apdu)
+ 
+-- 
+2.25.1
+
